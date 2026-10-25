@@ -1,4 +1,4 @@
-name: Build MYRA APK from ZIP
+name: Build MYRA APK
 
 on:
   push:
@@ -17,29 +17,47 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Extract Project ZIP and Build
+      - name: Create Project and Build APK
         run: |
-          # अगर आपकी रिपॉजिटरी में कोई भी .zip फाइल होगी, तो यह उसे ऑटोमैटिक अनजिप कर देगा
-          if ls *.zip 1> /dev/null 2>&1; then
-            echo "Found ZIP file, extracting..."
-            unzip -o '*.zip'
-          fi
+          # सभी पुराने जंजाल और ज़िप फाइलों को साफ़ करें
+          rm -rf app build .gradle gradle gradlew gradlew.bat *.zip MYRA-AI
+
+          # सीधे रूट फोल्डर में एंड्रॉइड प्रोजेक्ट ढांचा बनाएं
+          mkdir -p app/src/main/java/com/myra/ai
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/layout
+
+          # 1. gradle.properties
+          printf 'android.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
+
+          # 2. settings.gradle.kts
+          printf 'pluginManagement {\n    repositories {\n        google()\n        mavenCentral()\n        gradlePluginPortal()\n    }\n}\ndependencyResolutionManagement {\n    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\nrootProject.name = "MYRA AI"\ninclude(":app")\n' > settings.gradle.kts
+
+          # 3. app/build.gradle.kts
+          printf 'plugins {\n    id("com.android.application")\n    id("org.jetbrains.kotlin.android")\n}\n\nandroid {\n    namespace = "com.myra.ai"\n    compileSdk = 34\n\n    defaultConfig {\n        applicationId = "com.myra.ai"\n        minSdk = 24\n        targetSdk = 34\n        versionCode = 1\n        versionName = "1.0"\n    }\n}\n\ndependencies {\n    implementation("androidx.core:core-ktx:1.12.0")\n    implementation("androidx.appcompat:appcompat:1.6.1")\n    implementation("com.google.android.material:material:1.11.0")\n}\n' > app/build.gradle.kts
+
+          # 4. AndroidManifest.xml
+          printf '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.myra.ai">\n    <application android:label="MYRA AI" android:theme="@style/Theme.AppCompat.Light.NoActionBar">\n        <activity android:name=".MainActivity" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n' > app/src/main/AndroidManifest.xml
+
+          # 5. strings.xml
+          printf '<resources>\n    <string name="app_name">MYRA AI</string>\n</resources>\n' > app/src/main/res/values/strings.xml
+
+          # 6. MainActivity.kt
+          printf 'package com.myra.ai\n\nimport android.os.Bundle\nimport androidx.appcompat.app.AppCompatActivity\n\nclass MainActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        setContentView(R.layout.activity_main)\n    }\n}\n' > app/src/main/java/com/myra/ai/MainActivity.kt
+
+          # 7. activity_main.xml
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"\n    android:layout_width="match_parent" android:layout_height="match_parent"\n    android:gravity="center" android:orientation="vertical" android:background="#121212">\n    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"\n        android:text="MYRA AI Ready" android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold"/>\n</LinearLayout>\n' > app/src/main/res/layout/activity_main.xml
 
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.7
-          fi
-
-          chmod +x gradlew || true
+          # स्थिर रैपर जनरेट करें और बिल्ड करें
+          gradle wrapper --gradle-version 8.4
+          chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: myra-debug-apk
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            build/outputs/apk/debug/*.apk
-            **/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
