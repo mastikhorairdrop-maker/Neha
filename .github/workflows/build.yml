@@ -19,10 +19,18 @@ jobs:
 
       - name: Build Real Project APK
         run: |
-          # अगर ज़िप फोल्डर बाहर है तो उसकी फाइलों को बाहर मुख्य रूट पर ले आएं
-          if [ -d "MYRA-AI" ]; then
-            cp -r MYRA-AI/* .
+          # चेक करें कि gradlew कहाँ पर है और सही फोल्डर में जाएं
+          if [ -f "gradlew" ]; then
+            PROJECT_DIR="."
+          elif [ -f "MYRA-AI/gradlew" ]; then
+            PROJECT_DIR="MYRA-AI"
+          else
+            # अगर gradlew नहीं मिला, तो नया रैपर जनरेट कर लेंगे
+            PROJECT_DIR="."
+            gradle wrapper --gradle-version 8.4
           fi
+
+          cd $PROJECT_DIR
 
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
