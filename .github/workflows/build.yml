@@ -1,4 +1,4 @@
-name: Build MYRA APK
+name: Build Real MYRA APK
 
 on:
   push:
@@ -17,51 +17,27 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build MYRA APK Successfully
+      - name: Build Actual MYRA Project
         run: |
-          # सभी पुराने जंजाल और ज़िप फाइलों को साफ़ करें
-          rm -rf app build .gradle gradle gradlew gradlew.bat *.zip MYRA-AI
-
-          # एंड्रॉइड प्रोजेक्ट का आधुनिक ढांचा बनाएं
-          mkdir -p app/src/main/java/com/myra/ai
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/layout
-
-          # 1. gradle.properties (वर्निंग्स को इग्नोर करने के लिए मोड सेट किया गया है)
-          printf 'android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.warning.mode=none\n' > gradle.properties
-
-          # 2. settings.gradle.kts
-          printf 'pluginManagement {\n    repositories {\n        google()\n        mavenCentral()\n        gradlePluginPortal()\n    }\n}\ndependencyResolutionManagement {\n    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\nrootProject.name = "MYRA AI"\ninclude(":app")\n' > settings.gradle.kts
-
-          # 3. root build.gradle.kts
-          printf 'plugins {\n    id("com.android.application") version "8.2.0" apply false\n    id("org.jetbrains.kotlin.android") version "1.9.20" apply false\n}\n' > build.gradle.kts
-
-          # 4. app/build.gradle.kts
-          printf 'plugins {\n    id("com.android.application")\n    id("org.jetbrains.kotlin.android")\n}\n\nandroid {\n    namespace = "com.myra.ai"\n    compileSdk = 34\n\n    defaultConfig {\n        applicationId = "com.myra.ai"\n        minSdk = 24\n        targetSdk = 34\n        versionCode = 1\n        versionName = "1.0"\n    }\n}\n\ndependencies {\n    implementation("androidx.core:core-ktx:1.12.0")\n    implementation("androidx.appcompat:appcompat:1.6.1")\n    implementation("com.google.android.material:material:1.11.0")\n}\n' > app/build.gradle.kts
-
-          # 5. AndroidManifest.xml
-          printf '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.myra.ai">\n    <application android:label="MYRA AI" android:theme="@style/Theme.AppCompat.Light.NoActionBar">\n        <activity android:name=".MainActivity" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n' > app/src/main/AndroidManifest.xml
-
-          # 6. strings.xml
-          printf '<resources>\n    <string name="app_name">MYRA AI</string>\n</resources>\n' > app/src/main/res/values/strings.xml
-
-          # 7. MainActivity.kt
-          printf 'package com.myra.ai\n\nimport android.os.Bundle\nimport androidx.appcompat.app.AppCompatActivity\n\nclass MainActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        setContentView(R.layout.activity_main)\n    }\n}\n' > app/src/main/java/com/myra/ai/MainActivity.kt
-
-          # 8. activity_main.xml
-          printf '<?xml version="1.0" encoding="utf-8"?>\n<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"\n    android:layout_width="match_parent" android:layout_height="match_parent"\n    android:gravity="center" android:orientation="vertical" android:background="#121212">\n    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"\n        android:text="MYRA AI Ready" android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold"/>\n</LinearLayout>\n' > app/src/main/res/layout/activity_main.xml
+          # अगर प्रोजेक्ट MYRA-AI फोल्डर के अंदर है, तो उसमें जाएं
+          if [ -d "MYRA-AI" ]; then
+            cd MYRA-AI
+          fi
 
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-          # Gradle 9.8.1 रैपर और बिल्ड कमांड
-          gradle wrapper --gradle-version 9.8.1
+          # अगर gradlew नहीं है तो रैपर बनाएं, वरना सीधे बिल्ड करें
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.4
+          fi
+
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --warning-mode none
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: myra-debug-apk
+          name: myra-real-apk
           path: |
-            app/build/outputs/apk/debug/*.apk
+            **/build/outputs/apk/debug/*.apk
