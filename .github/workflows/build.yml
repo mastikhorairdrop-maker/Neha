@@ -1,4 +1,4 @@
-name: Build Real MYRA APK
+name: Build MYRA APK
 
 on:
   push:
@@ -17,20 +17,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Actual MYRA Project
+      - name: Build Real Project APK
         run: |
-          # अगर प्रोजेक्ट MYRA-AI फोल्डर के अंदर है, तो उसमें जाएं
+          # अगर ज़िप फोल्डर बाहर है तो उसकी फाइलों को बाहर मुख्य रूट पर ले आएं
           if [ -d "MYRA-AI" ]; then
-            cd MYRA-AI
+            cp -r MYRA-AI/* .
           fi
 
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-
-          # अगर gradlew नहीं है तो रैपर बनाएं, वरना सीधे बिल्ड करें
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper --gradle-version 8.4
-          fi
 
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
@@ -38,6 +33,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: myra-real-apk
+          name: myra-apk
           path: |
             **/build/outputs/apk/debug/*.apk
